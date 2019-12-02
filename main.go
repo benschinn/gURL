@@ -4,19 +4,19 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
-  //"net/http/httputil"
+	//"net/http/httputil"
+	"bytes"
+	"encoding/json"
 	"os"
 	"regexp"
-  //"strings"
-  "net/url"
-  //"bytes"
-  //"log"
-  //"os/exec"
+	"time"
+	//"log"
+	//"os/exec"
 )
 
 type UserCred struct {
-  email string
-  password string
+	email    string
+	password string
 }
 
 var signInUrl string = os.Args[1]
@@ -47,39 +47,51 @@ func getToken() string {
 	return token
 }
 func authenticate(csrfToken string) {
-  reqBody := url.Values{"v1_analytics_user[email]": {"demo@dashboard.com"}, "v1_analytics_user[password]": {"password0"}, "authenticity_token": {csrfToken}}
-  fmt.Println(reqBody)
-  fmt.Println(signInUrl)
-  resp, err := http.PostForm(signInUrl, reqBody)
-  if err != nil {
-    fmt.Println("Had a problem authenticating!", err.Error())
-  }
-  fmt.Println(resp)
-  defer resp.Body.Close()
+	reqBody, err := json.Marshal(map[string]string{
+		"v1_analytics_user[email]":    "demo@dashboard.com",
+		"v1_analytics_user[password]": "password0",
+		"authenticity_token":          csrfToken,
+		"commit":                      "SIGN IN",
+	})
 
-  //body, err := ioutil.ReadAll(resp.Body)
-  //outcome := string(body)
-  //fmt.Println(outcome)
+	if err != nil {
+		fmt.Println("Had a problem authenticating!", err.Error())
+	}
+
+	timeout := time.Duration(7 * time.Second)
+	client := http.Client{
+		Timeout: timeout,
+	}
+
+	request, err := http.NewRequest("POST", signInUrl, bytes.NewBuffer(reqBody))
+	request.Header.Set("Content-type", "application/x-www-form-urlencoded")
+	request.Header.Set("Accept-language", "en-US,en;q=0.9")
+
+	if err != nil {
+		fmt.Println("Http client has problems.", err.Error())
+	}
+
+	resp, err := client.Do(request)
+
+	if err != nil {
+		fmt.Println("Error making request", err.Error())
+	}
+
+	defer resp.Body.Close()
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		fmt.Println("Error reading body", err.Error())
+	}
+
+	fmt.Println(string(body))
+	fmt.Println(bytes.NewBuffer(reqBody))
+	fmt.Println(request.Body)
+	fmt.Println(request)
+	fmt.Println(resp)
 }
 
 func main() {
 	csrf := getToken()
-  fmt.Println(csrf)
-  authenticate(csrf)
-  /*
-  //cmd := exec.Command("curl", "https://dashboard.qa.internal.mx/sign_in")
-  curlReq := "https://dashboard.qa.internal.mx/sign_in"
-  userCred := "v1_analytics_user[email]=demo@dashboard.com&v1_analytics_user[password]=password0"
-  token :="authenticity_token=\"" + csrf + "\""
-  fmt.Println(curlReq)
-  cmd := exec.Command("curl", curlReq, "--data", userCred, "--data-urlencode", token, "--cookie", "cookie", "--cookie-jar", "cookie")
-  //cmd.Stdin = strings.NewReader("some input")
-  var out bytes.Buffer
-  cmd.Stdout = &out
-  err := cmd.Run()
-  if err != nil {
-    log.Fatal(err)
-  }
-  fmt.Printf(out.String())
-  */
+	authenticate(csrf)
 }
