@@ -11,11 +11,6 @@ import (
 	"time"
 )
 
-type UserCred struct {
-	email    string
-	password string
-}
-
 var signInUrl string = os.Args[1]
 
 func getToken() string {
