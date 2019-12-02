@@ -8,7 +8,7 @@ import (
 	"os"
 	"regexp"
   //"strings"
-  //"net/url"
+  "net/url"
   //"bytes"
   //"log"
   //"os/exec"
@@ -46,53 +46,27 @@ func getToken() string {
 
 	return token
 }
-/*
 func authenticate(csrfToken string) {
-  requestURL := url.URL{
-    Scheme: "https",
-    Host:   "dashboard.qa.internal.mx",
-    Path:   "/sign_in",
-  }
-  reqBody := strings.NewReader(`{
-    "v1_analytics_user": {
-      "email":   {"demo@dashboard.com"},
-      "password: {"password0"},
-    },
-    "authenticity_token": {csrfToken}
-  }`)
-
-  requestHeaders := http.Header{
-    "Content-Type": {"application/vnd.moneydesktop.sso.v3+json"},
-    "Accept":       {"application/x-www-form-urlencoded"},
-    "X-CSRF-Token":   {csrfToken},
-  }
-
-  jsonBody := []byte(string(reqBody))
-
-  request := http.Request{
-    Method:        "POST",
-    URL:           &requestURL,
-    Header:        requestHeaders,
-    Body:          ioutil.NopCloser(bytes.NewReader(jsonBody)),
-    ContentLength: int64(len(jsonBody)),
-  }
-  dump, err := httputil.DumpRequest(&request, true)
-
+  reqBody := url.Values{"v1_analytics_user[email]": {"demo@dashboard.com"}, "v1_analytics_user[password]": {"password0"}, "authenticity_token": {csrfToken}}
+  fmt.Println(reqBody)
+  fmt.Println(signInUrl)
+  resp, err := http.PostForm(signInUrl, reqBody)
   if err != nil {
-    fmt.Println("dump err", err.Error())
+    fmt.Println("Had a problem authenticating!", err.Error())
   }
+  fmt.Println(resp)
+  defer resp.Body.Close()
 
-  // Make the request
-  fmt.Println("******** REQUEST ********")
-  fmt.Println(string(dump))
+  //body, err := ioutil.ReadAll(resp.Body)
+  //outcome := string(body)
+  //fmt.Println(outcome)
 }
-*/
 
 func main() {
 	csrf := getToken()
   fmt.Println(csrf)
+  authenticate(csrf)
   /*
-  //authenticate(csrf)
   //cmd := exec.Command("curl", "https://dashboard.qa.internal.mx/sign_in")
   curlReq := "https://dashboard.qa.internal.mx/sign_in"
   userCred := "v1_analytics_user[email]=demo@dashboard.com&v1_analytics_user[password]=password0"
