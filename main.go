@@ -2,13 +2,14 @@ package main
 
 import (
 	"bytes"
-	//"encoding/json"
-  "net/http/httputil"
-  "net/url"
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"net/http/httputil"
+  "net/http/cookiejar"
+	"net/url"
 	"os"
+  "log"
 	"regexp"
 )
 
@@ -49,54 +50,59 @@ func getToken() string {
 	return token
 }
 func authenticate(csrfToken string) {
-  requestURL := url.URL{
-    Scheme: "http",
-    Host:   "dashboard.localhost:3000",
-    Path:   "/sign_in",
+  cj, _ := cookiejar.New(nil)
+
+  client := &http.Client{
+    Jar: cj,
   }
 
-  // Build the headers
-  requestHeaders := http.Header{
-    "Content-Type": {"application/x-www-form-urlencoded"},
-    "Accept-Language": {"en-US,en;q=0.9"},
-  }
-  var reqBody = []byte(fmt.Sprintf(`{
-		"v1_analytics_user[email]":    "demo@dashboard.com",
-		"v1_analytics_user[password]": "password0",
-		"authenticity_token":          %s,
-		"commit":                      "SIGN IN",
-	}`, csrfToken))
+	requestURL := url.URL{
+		Scheme: "http",
+		Host:   "dashboard.localhost:3000",
+		Path:   "/sign_in",
+	}
 
-  request := http.Request{
-    Method:        "POST",
-    URL:           &requestURL,
-    Header:        requestHeaders,
-    Body:          ioutil.NopCloser(bytes.NewReader(reqBody)),
-    ContentLength: int64(len(reqBody)),
-  }
-  dump, err := httputil.DumpRequest(&request, true)
-  if err != nil {
-    fmt.Println("dump err", err.Error())
-  }
+	requestHeaders := http.Header{
+    "Accept":          {"*/*"},
+    "Accept-Encoding": {"gzip, defalte"},
+		"Content-Type":    {"application/x-www-form-urlencoded"},
+		"Accept-Language": {"en-US,en;q=0.9"},
+	}
 
-  // Make the request
-  fmt.Println("******** REQUEST ********")
-  fmt.Println(string(dump))
-  resp, err := http.DefaultClient.Do(&request)
+	form := url.Values{"v1_analytics_user[email]": {"demo@dashboard.com"}, "v1_analytics_user[password]": {"password0"}, "authenticity_token": {csrfToken}}
 
-  defer resp.Body.Close()
+	request := http.Request{
+		Method:        "POST",
+		URL:           &requestURL,
+		Header:        requestHeaders,
+		Body:          ioutil.NopCloser(bytes.NewReader([]byte(form.Encode()))),
+		ContentLength: int64(len(form.Encode())),
+	}
+	dump, err := httputil.DumpRequest(&request, true)
+	if err != nil {
+		fmt.Println("dump err", err.Error())
+	}
 
-  if err != nil {
-    fmt.Println("Request didn't make it!", err.Error())
-  }
+	fmt.Println("******** REQUEST ********")
+	fmt.Println(string(dump))
+  fmt.Println("CONTENT LENGTH", request.ContentLength)
 
-  // Parse the response
-  responseBody, err := ioutil.ReadAll(resp.Body)
+	resp, err := client.Do(&request)
 
-  if err != nil {
-    fmt.Println("Failed to read body", err.Error())
-  }
+  //fmt.Println("ERROR", err.Error())
   fmt.Println(resp)
+
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer resp.Body.Close()
+  fmt.Println(resp.Body)
+
+	responseBody, err := ioutil.ReadAll(resp.Body)
+
+	if err != nil {
+		fmt.Println("Failed to read body", err.Error())
+	}
 
 	d1 := []byte(string(responseBody))
 	errr := ioutil.WriteFile("./response.html", d1, 0644)
