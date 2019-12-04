@@ -69,14 +69,20 @@ func authenticate(csrfToken string) {
 		"Accept-Language": {"en-US,en;q=0.9"},
 	}
 
-	form := url.Values{"v1_analytics_user[email]": {"demo@dashboard.com"}, "v1_analytics_user[password]": {"password0"}, "authenticity_token": {csrfToken}}
+	//form := url.Values{"v1_analytics_user[email]": {"demo@dashboard.com"}, "v1_analytics_user[password]": {"password0"}, "authenticity_token": {csrfToken}}
+  form := url.Values{}
+  form.Add("v1_analytics_user[email]", "demo@dashboard.com")
+  form.Add("v1_analytics_user[password]", "password0")
+  form.Add("authenticity_token", csrfToken)
+  form.Add("commit", "SIGN IN")
+  encodedForm := form.Encode()
 
 	request := http.Request{
 		Method:        "POST",
 		URL:           &requestURL,
 		Header:        requestHeaders,
-		Body:          ioutil.NopCloser(bytes.NewReader([]byte(form.Encode()))),
-		ContentLength: int64(len(form.Encode())),
+		Body:          ioutil.NopCloser(bytes.NewReader([]byte(encodedForm))),
+		ContentLength: int64(len(encodedForm)),
 	}
 	dump, err := httputil.DumpRequest(&request, true)
 	if err != nil {
